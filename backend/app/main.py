@@ -16,4 +16,4 @@ app.add_middleware(
 @app.get("/api/hello")
 def hello() -> dict[str, str]:
     """Return the canonical hello-world payload."""
-    return {"message": "Hello, World!"}
+    return {"message": "Hello, World FJ!"}
