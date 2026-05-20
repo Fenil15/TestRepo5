@@ -28,3 +28,19 @@ def hello() -> dict[str, str]:
 def list_customers() -> list[dict]:
     """Return list of all customers."""
     return list(customers.values())
+
+
+@app.post("/api/customers", status_code=201)
+def create_customer(body: dict) -> dict:
+    """Create a new customer; name and email are required."""
+    customer_id = str(uuid.uuid4())
+    customer = {
+        "id": customer_id,
+        "name": body["name"],
+        "email": body["email"],
+        "phone": body.get("phone"),
+        "company": body.get("company"),
+        "address": body.get("address"),
+    }
+    customers[customer_id] = customer
+    return customer
