@@ -1,0 +1,159 @@
+.customers-page {
+  max-width: 1100px;
+}
+
+.customers-page h1 {
+  margin-bottom: 1.5rem;
+}
+
+/* Status messages */
+.customers-status {
+  font-size: 1rem;
+  color: #aaa;
+  margin-bottom: 1rem;
+}
+
+.customers-status--error {
+  color: #e05c5c;
+}
+
+.customers-form-error {
+  color: #e05c5c;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+/* Table */
+.customers-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 2.5rem;
+}
+
+.customers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.customers-table th,
+.customers-table td {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #333;
+}
+
+.customers-table th {
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+.customers-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.customers-row--editing td {
+  background-color: rgba(100, 108, 255, 0.06);
+}
+
+.customers-empty {
+  text-align: center;
+  color: #888;
+  padding: 1.5rem 0;
+}
+
+/* Inputs in table and form */
+.customers-input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  background-color: #2a2a3e;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.customers-input:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+/* Actions cell */
+.customers-actions {
+  white-space: nowrap;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* Buttons */
+.customers-btn {
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.customers-btn:hover {
+  opacity: 0.85;
+}
+
+.customers-btn--edit {
+  background-color: #444;
+  color: #e0e0e0;
+}
+
+.customers-btn--delete {
+  background-color: #8b2020;
+  color: #fff;
+}
+
+.customers-btn--save {
+  background-color: #1a6e1a;
+  color: #fff;
+}
+
+.customers-btn--cancel {
+  background-color: #555;
+  color: #e0e0e0;
+}
+
+.customers-btn--submit {
+  background-color: #646cff;
+  color: #fff;
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* Add Customer form */
+.customers-add {
+  margin-top: 1rem;
+}
+
+.customers-add h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.customers-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 480px;
+}
+
+.customers-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.customers-form-row label {
+  font-size: 0.9rem;
+  color: #ccc;
+}
