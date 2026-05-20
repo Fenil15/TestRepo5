@@ -115,3 +115,24 @@ def test_update_customer_unknown_returns_404():
         json={"name": "Ghost", "email": "ghost@example.com"},
     )
     assert response.status_code == 404
+
+
+def test_delete_customer_returns_204():
+    """DELETE /api/customers/{id} deletes a customer and returns 204."""
+    created = client.post(
+        "/api/customers", json={"name": "Frank", "email": "frank@example.com"}
+    ).json()
+    customer_id = created["id"]
+
+    response = client.delete(f"/api/customers/{customer_id}")
+    assert response.status_code == 204
+
+    # Confirm it's gone
+    get_response = client.get(f"/api/customers/{customer_id}")
+    assert get_response.status_code == 404
+
+
+def test_delete_customer_unknown_returns_404():
+    """DELETE /api/customers/{id} returns 404 for unknown id."""
+    response = client.delete("/api/customers/nonexistent-id")
+    assert response.status_code == 404
