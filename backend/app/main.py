@@ -18,6 +18,13 @@ app.add_middleware(
 customers: dict[str, dict] = {}
 
 
+def _get_or_404(customer_id: str) -> dict:
+    """Return customer by id or raise 404."""
+    if customer_id not in customers:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customers[customer_id]
+
+
 @app.get("/api/hello")
 def hello() -> dict[str, str]:
     """Return the canonical hello-world payload."""
@@ -49,17 +56,13 @@ def create_customer(body: dict) -> dict:
 @app.get("/api/customers/{customer_id}")
 def get_customer(customer_id: str) -> dict:
     """Return a single customer by id, or 404 if not found."""
-    if customer_id not in customers:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    return customers[customer_id]
+    return _get_or_404(customer_id)
 
 
 @app.put("/api/customers/{customer_id}")
 def update_customer(customer_id: str, body: dict) -> dict:
     """Update an existing customer by id, or 404 if not found."""
-    if customer_id not in customers:
-        raise HTTPException(status_code=404, detail="Customer not found")
-    existing = customers[customer_id]
+    existing = _get_or_404(customer_id)
     updated = {
         "id": customer_id,
         "name": body.get("name", existing["name"]),
@@ -75,6 +78,5 @@ def update_customer(customer_id: str, body: dict) -> dict:
 @app.delete("/api/customers/{customer_id}", status_code=204)
 def delete_customer(customer_id: str) -> None:
     """Delete a customer by id, or 404 if not found."""
-    if customer_id not in customers:
-        raise HTTPException(status_code=404, detail="Customer not found")
+    _get_or_404(customer_id)
     del customers[customer_id]
