@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -44,3 +44,11 @@ def create_customer(body: dict) -> dict:
     }
     customers[customer_id] = customer
     return customer
+
+
+@app.get("/api/customers/{customer_id}")
+def get_customer(customer_id: str) -> dict:
+    """Return a single customer by id, or 404 if not found."""
+    if customer_id not in customers:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customers[customer_id]
