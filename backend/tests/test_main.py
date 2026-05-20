@@ -72,3 +72,20 @@ def test_create_customer_appears_in_list():
     assert list_response.status_code == 200
     ids = [c["id"] for c in list_response.json()]
     assert customer_id in ids
+
+
+def test_get_customer_returns_200():
+    """GET /api/customers/{id} returns 200 with the customer data."""
+    payload = {"name": "Dana", "email": "dana@example.com"}
+    created = client.post("/api/customers", json=payload).json()
+    customer_id = created["id"]
+
+    response = client.get(f"/api/customers/{customer_id}")
+    assert response.status_code == 200
+    assert response.json() == created
+
+
+def test_get_customer_unknown_returns_404():
+    """GET /api/customers/{id} returns 404 for unknown id."""
+    response = client.get("/api/customers/nonexistent-id")
+    assert response.status_code == 404
