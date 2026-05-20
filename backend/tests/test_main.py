@@ -89,3 +89,29 @@ def test_get_customer_unknown_returns_404():
     """GET /api/customers/{id} returns 404 for unknown id."""
     response = client.get("/api/customers/nonexistent-id")
     assert response.status_code == 404
+
+
+def test_update_customer_returns_200():
+    """PUT /api/customers/{id} updates a customer and returns updated data."""
+    created = client.post(
+        "/api/customers", json={"name": "Eve", "email": "eve@example.com"}
+    ).json()
+    customer_id = created["id"]
+
+    update_payload = {"name": "Eve Updated", "email": "eve-updated@example.com", "phone": "999-0000"}
+    response = client.put(f"/api/customers/{customer_id}", json=update_payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == customer_id
+    assert data["name"] == "Eve Updated"
+    assert data["email"] == "eve-updated@example.com"
+    assert data["phone"] == "999-0000"
+
+
+def test_update_customer_unknown_returns_404():
+    """PUT /api/customers/{id} returns 404 for unknown id."""
+    response = client.put(
+        "/api/customers/nonexistent-id",
+        json={"name": "Ghost", "email": "ghost@example.com"},
+    )
+    assert response.status_code == 404
