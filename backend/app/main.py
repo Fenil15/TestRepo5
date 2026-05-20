@@ -52,3 +52,21 @@ def get_customer(customer_id: str) -> dict:
     if customer_id not in customers:
         raise HTTPException(status_code=404, detail="Customer not found")
     return customers[customer_id]
+
+
+@app.put("/api/customers/{customer_id}")
+def update_customer(customer_id: str, body: dict) -> dict:
+    """Update an existing customer by id, or 404 if not found."""
+    if customer_id not in customers:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    existing = customers[customer_id]
+    updated = {
+        "id": customer_id,
+        "name": body.get("name", existing["name"]),
+        "email": body.get("email", existing["email"]),
+        "phone": body.get("phone", existing["phone"]),
+        "company": body.get("company", existing["company"]),
+        "address": body.get("address", existing["address"]),
+    }
+    customers[customer_id] = updated
+    return updated
