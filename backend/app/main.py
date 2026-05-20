@@ -70,3 +70,11 @@ def update_customer(customer_id: str, body: dict) -> dict:
     }
     customers[customer_id] = updated
     return updated
+
+
+@app.delete("/api/customers/{customer_id}", status_code=204)
+def delete_customer(customer_id: str) -> None:
+    """Delete a customer by id, or 404 if not found."""
+    if customer_id not in customers:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    del customers[customer_id]
