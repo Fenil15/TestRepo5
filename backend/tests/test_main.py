@@ -136,3 +136,17 @@ def test_delete_customer_unknown_returns_404():
     """DELETE /api/customers/{id} returns 404 for unknown id."""
     response = client.delete("/api/customers/nonexistent-id")
     assert response.status_code == 404
+
+
+def test_cors_allows_post_method():
+    """CORS preflight for POST /api/customers is allowed from localhost:5173."""
+    response = client.options(
+        "/api/customers",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.status_code == 200
+    allowed_methods = response.headers.get("access-control-allow-methods", "")
+    assert "POST" in allowed_methods
