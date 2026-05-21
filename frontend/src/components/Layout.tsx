@@ -8,6 +8,7 @@ function Layout() {
         <NavLink to="/" end>
           Home
         </NavLink>
+        <NavLink to="/dashboard">Dashboard</NavLink>
         <NavLink to="/customers">Manage Customers</NavLink>
       </nav>
       <div className="layout-content">

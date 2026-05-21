@@ -1,0 +1,33 @@
+.kpi-card {
+  background-color: #1e1e2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kpi-card__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #a0a0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpi-card__value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.kpi-card__subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #646cff;
+}
