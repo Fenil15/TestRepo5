@@ -133,6 +133,9 @@
 /* Add Customer form */
 .customers-add {
   margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .customers-add h2 {
