@@ -5,9 +5,6 @@ function Layout() {
   return (
     <>
       <nav className="nav">
-        <NavLink to="/" end>
-          Home
-        </NavLink>
         <NavLink to="/dashboard">Dashboard</NavLink>
         <NavLink to="/customers">Manage Customers</NavLink>
       </nav>
