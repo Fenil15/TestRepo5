@@ -1,0 +1,21 @@
+.dashboard-page {
+  max-width: 1200px;
+}
+
+.dashboard-page h1 {
+  margin-bottom: 1.5rem;
+  font-size: 1.75rem;
+  color: #ffffff;
+}
+
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
