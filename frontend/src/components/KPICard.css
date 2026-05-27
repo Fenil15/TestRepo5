@@ -16,6 +16,7 @@
   color: #a0a0b0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-align: left;
 }
 
 .kpi-card__value {
@@ -24,10 +25,12 @@
   font-weight: 700;
   color: #ffffff;
   line-height: 1.2;
+  text-align: left;
 }
 
 .kpi-card__subtitle {
   margin: 0;
   font-size: 0.8rem;
   color: #646cff;
+  text-align: left;
 }
