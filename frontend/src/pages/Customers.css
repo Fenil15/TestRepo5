@@ -152,11 +152,18 @@
 
 .customers-form-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .customers-form-row label {
   font-size: 0.9rem;
   color: #ccc;
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.customers-form-row .customers-input {
+  flex: 1;
 }
