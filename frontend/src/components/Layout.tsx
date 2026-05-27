@@ -5,7 +5,7 @@ function Layout() {
   return (
     <>
       <nav className="nav">
-        <NavLink to="/dashboard">Dashboard</NavLink>
+        <NavLink to="/dashboard">Dashboard Left</NavLink>
         <NavLink to="/customers">Manage Customers</NavLink>
       </nav>
       <div className="layout-content">

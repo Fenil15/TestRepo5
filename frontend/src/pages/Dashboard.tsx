@@ -26,7 +26,7 @@ function Dashboard() {
 
   return (
     <main className="dashboard-page">
-      <h1>Dashboard</h1>
+      <h1>Dashboard Left</h1>
       <div className="dashboard-kpi-grid">
         <KPICard title="Revenue" value={formatCurrency(kpiTotals.revenue)} />
         <KPICard title="Orders" value={formatNumber(kpiTotals.orders)} />
