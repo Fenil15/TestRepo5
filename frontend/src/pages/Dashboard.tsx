@@ -58,6 +58,7 @@ function Dashboard() {
         </div>
       </div>
 
+      <h1>Dashboard</h1>
       <div className="dashboard-kpi-grid">
         <KPICard title="Revenue" value={formatCurrency(kpiTotals.revenue)} />
         <KPICard title="Orders" value={formatNumber(kpiTotals.orders)} />
