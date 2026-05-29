@@ -6,6 +6,7 @@ function Layout() {
     <>
       <nav className="nav">
         <NavLink to="/dashboard">Dashboard</NavLink>
+        <NavLink to="/recent-orders">Recent Orders</NavLink>
         <NavLink to="/customers">Manage Customers</NavLink>
       </nav>
       <div className="layout-content">
