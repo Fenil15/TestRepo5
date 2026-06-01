@@ -1,5 +1,6 @@
 .nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.5rem;
   padding: 1rem 2rem;
   background-color: #1a1a2e;
@@ -26,4 +27,19 @@
 
 .layout-content {
   padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  .nav {
+    gap: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .nav a {
+    font-size: 0.95rem;
+  }
+
+  .layout-content {
+    padding: 1.5rem 1rem;
+  }
 }

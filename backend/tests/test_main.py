@@ -150,3 +150,267 @@ def test_cors_allows_post_method():
     assert response.status_code == 200
     allowed_methods = response.headers.get("access-control-allow-methods", "")
     assert "POST" in allowed_methods
+
+
+def make_order(**overrides):
+    """Build a product order for risk-scoring tests."""
+    order = {
+        "id": "ORD-TEST",
+        "customer": "Test Customer",
+        "customerEmail": "test@example.com",
+        "date": "2024-05-10",
+        "status": "Processing",
+        "products": [
+            {
+                "name": "Sticker Pack",
+                "category": "Accessories",
+                "quantity": 1,
+                "unitPrice": 10.0,
+            }
+        ],
+        "shippingCountry": "US",
+        "billingCountry": "US",
+        "paymentMethod": "Credit Card",
+    }
+    order.update(overrides)
+    return order
+
+
+def test_calculate_order_total_with_multiple_products():
+    """Order totals include all product lines and are rounded to cents."""
+    order = make_order(
+        products=[
+            {
+                "name": "Widget",
+                "category": "Tools",
+                "quantity": 2,
+                "unitPrice": 12.345,
+            },
+            {"name": "Gadget", "category": "Tools", "quantity": 3, "unitPrice": 5.5},
+        ]
+    )
+
+    assert main_module.calculate_order_total(order) == 41.19
+
+
+def test_count_orders_by_customer_date_groups_email_and_date():
+    """Order counts are grouped by customer email and order date."""
+    orders = [
+        make_order(id="ORD-1", customerEmail="a@example.com", date="2024-05-10"),
+        make_order(id="ORD-2", customerEmail="a@example.com", date="2024-05-10"),
+        make_order(id="ORD-3", customerEmail="a@example.com", date="2024-05-11"),
+        make_order(id="ORD-4", customerEmail="b@example.com", date="2024-05-10"),
+    ]
+
+    assert main_module.count_orders_by_customer_date(orders) == {
+        ("a@example.com", "2024-05-10"): 2,
+        ("a@example.com", "2024-05-11"): 1,
+        ("b@example.com", "2024-05-10"): 1,
+    }
+
+
+def test_score_order_risk_high_value_and_country_mismatch():
+    """High value plus billing/shipping mismatch scores as medium risk."""
+    order = make_order(
+        products=[
+            {
+                "name": "Premium Tablet",
+                "category": "Electronics",
+                "quantity": 1,
+                "unitPrice": 650.0,
+            }
+        ],
+        shippingCountry="US",
+        billingCountry="CA",
+    )
+
+    risk = main_module.score_order_risk(order, customer_date_count=1)
+
+    assert risk == {
+        "score": 50,
+        "level": "Medium",
+        "reasons": [
+            "High order value",
+            "Billing and shipping country mismatch",
+        ],
+    }
+
+
+def test_score_order_risk_same_day_repeat_customer_count_of_three():
+    """Customers with three same-day orders receive the repeat-order signal."""
+    risk = main_module.score_order_risk(make_order(), customer_date_count=3)
+
+    assert risk["score"] == 25
+    assert risk["level"] == "Low"
+    assert risk["reasons"] == ["Multiple same-day orders by customer"]
+
+
+def test_score_order_risk_low_risk_order():
+    """A normal low-value order has no signals and remains low risk."""
+    risk = main_module.score_order_risk(make_order(), customer_date_count=1)
+
+    assert risk["score"] < 30
+    assert risk["level"] == "Low"
+    assert risk["reasons"] == []
+
+
+def test_score_order_risk_caps_at_100():
+    """Risk scores are capped at 100 when all scoring rules match."""
+    order = make_order(
+        status="Cancelled",
+        products=[
+            {
+                "name": "Camera Bundle",
+                "category": "Electronics",
+                "quantity": 8,
+                "unitPrice": 100.0,
+            }
+        ],
+        shippingCountry="US",
+        billingCountry="CA",
+        paymentMethod="Gift Card",
+    )
+
+    risk = main_module.score_order_risk(order, customer_date_count=3)
+
+    assert risk["score"] == 100
+    assert risk["level"] == "High"
+    assert risk["reasons"] == [
+        "High order value",
+        "Bulk quantity order",
+        "Multiple same-day orders by customer",
+        "Billing and shipping country mismatch",
+        "Cancelled high-value order",
+        "Gift card payment on elevated order value",
+    ]
+
+
+def test_build_order_risk_report_empty_orders():
+    """Empty reports return zeroed summary values and no orders."""
+    report = main_module.build_order_risk_report([])
+
+    assert report == {
+        "summary": {
+            "totalOrders": 0,
+            "highRisk": 0,
+            "mediumRisk": 0,
+            "lowRisk": 0,
+            "averageRiskScore": 0.0,
+        },
+        "orders": [],
+    }
+
+
+def test_build_order_risk_report_rounds_average_risk_score():
+    """Average risk score is rounded to two decimal places."""
+    orders = [
+        make_order(id="ORD-LOW", customerEmail="low@example.com", products=[]),
+        make_order(
+            id="ORD-MEDIUM",
+            customerEmail="medium@example.com",
+            products=[
+                {
+                    "name": "Bulk Socks",
+                    "category": "Apparel",
+                    "quantity": 8,
+                    "unitPrice": 5.0,
+                }
+            ],
+        ),
+        make_order(
+            id="ORD-HIGH",
+            customerEmail="high@example.com",
+            products=[
+                {
+                    "name": "Laptop",
+                    "category": "Electronics",
+                    "quantity": 1,
+                    "unitPrice": 600.0,
+                }
+            ],
+            shippingCountry="US",
+            billingCountry="CA",
+        ),
+    ]
+
+    report = main_module.build_order_risk_report(orders)
+
+    assert report["summary"]["averageRiskScore"] == 23.33
+
+
+def test_build_order_risk_report_summary_counts_are_correct():
+    """Report summary counts each risk level correctly."""
+    orders = [
+        make_order(
+            id="ORD-HIGH",
+            customerEmail="high@example.com",
+            products=[
+                {
+                    "name": "Laptop",
+                    "category": "Electronics",
+                    "quantity": 1,
+                    "unitPrice": 600.0,
+                }
+            ],
+            shippingCountry="US",
+            billingCountry="CA",
+            paymentMethod="Gift Card",
+        ),
+        make_order(
+            id="ORD-MEDIUM",
+            customerEmail="medium@example.com",
+            products=[
+                {
+                    "name": "Console",
+                    "category": "Electronics",
+                    "quantity": 1,
+                    "unitPrice": 500.0,
+                }
+            ],
+        ),
+        make_order(id="ORD-LOW", customerEmail="low@example.com"),
+    ]
+
+    summary = main_module.build_order_risk_report(orders)["summary"]
+
+    assert summary["totalOrders"] == 3
+    assert summary["highRisk"] == 1
+    assert summary["mediumRisk"] == 1
+    assert summary["lowRisk"] == 1
+
+
+def test_get_order_risk_returns_summary_and_sorted_orders():
+    """GET /api/order-risk returns the scored sample-order report."""
+    response = client.get("/api/order-risk")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data["summary"]) == {
+        "totalOrders",
+        "highRisk",
+        "mediumRisk",
+        "lowRisk",
+        "averageRiskScore",
+    }
+    assert data["summary"]["totalOrders"] == len(main_module.product_orders)
+    assert data["summary"]["highRisk"] >= 1
+
+    risk_scores = [order["riskScore"] for order in data["orders"]]
+    assert risk_scores == sorted(risk_scores, reverse=True)
+    assert any(order["riskLevel"] == "High" for order in data["orders"])
+    for order in data["orders"]:
+        assert {
+            "id",
+            "customer",
+            "customerEmail",
+            "date",
+            "status",
+            "products",
+            "shippingCountry",
+            "billingCountry",
+            "paymentMethod",
+            "total",
+            "riskScore",
+            "riskLevel",
+            "riskReasons",
+        }.issubset(order)
