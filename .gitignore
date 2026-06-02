@@ -26,6 +26,11 @@ node_modules/
 dist/
 build/
 
+# Databases (local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
 # Env
 .env
 .env.local
