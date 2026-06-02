@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useReducer, useState } from 'react'
 import './Customers.css'
 
 type Customer = {
@@ -81,11 +81,12 @@ type SortableHeaderProps = {
 
 function SortableHeader({ label, field, activeField, dir, onSort }: SortableHeaderProps) {
   const isActive = field === activeField
-  const indicator = isActive ? (dir === 'asc' ? '▲' : '▼') : ''
+  const ascending = dir === 'asc'
+  const indicator = isActive ? (ascending ? '▲' : '▼') : ''
   return (
     <th
       className={`customers-th-sortable${isActive ? ' customers-th-sortable--active' : ''}`}
-      aria-sort={isActive ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      aria-sort={isActive ? (ascending ? 'ascending' : 'descending') : 'none'}
     >
       <button
         type="button"
@@ -178,12 +179,10 @@ function Customers() {
     [sortField],
   )
 
-  const rangeLabel = useMemo(() => {
-    if (total === 0) return '0 customers'
-    const start = (page - 1) * PAGE_SIZE + 1
-    const end = Math.min(page * PAGE_SIZE, total)
-    return `${start}–${end} of ${total}`
-  }, [page, total])
+  const rangeLabel =
+    total === 0
+      ? '0 customers'
+      : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`
 
   function handleAddChange(field: keyof FormData, value: string) {
     setAddForm((prev) => ({ ...prev, [field]: value }))

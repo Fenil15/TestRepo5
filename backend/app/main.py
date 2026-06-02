@@ -57,20 +57,21 @@ def list_customers(
     results = list(customers.values())
 
     # Filter by case-insensitive substring across name, email and company.
+    # str() guards against non-string stored values (the API accepts raw dicts).
     term = search.strip().lower()
     if term:
         results = [
             c
             for c in results
-            if term in (c.get("name") or "").lower()
-            or term in (c.get("email") or "").lower()
-            or term in (c.get("company") or "").lower()
+            if term in str(c.get("name") or "").lower()
+            or term in str(c.get("email") or "").lower()
+            or term in str(c.get("company") or "").lower()
         ]
 
     # Sort by an allowed field; fall back to name for unknown values.
     field = sort_by if sort_by in SORTABLE_FIELDS else "name"
     reverse = sort_dir == "desc"
-    results.sort(key=lambda c: (c.get(field) or "").lower(), reverse=reverse)
+    results.sort(key=lambda c: str(c.get(field) or "").lower(), reverse=reverse)
 
     total = len(results)
     start = (page - 1) * page_size
