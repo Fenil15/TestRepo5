@@ -2,19 +2,42 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-import app.main as main_module
-from app.main import app
+from app.db import Base, Customer
+from app.main import app, get_db
 
+# Use a shared in-memory SQLite database for tests so each test starts with a
+# clean schema while exercising the real ORM/session machinery.
+engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def _override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = _override_get_db
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def reset_customers():
-    """Clear the in-memory customers store before each test."""
-    main_module.customers.clear()
+def reset_database():
+    """Recreate a clean schema before and after each test."""
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     yield
-    main_module.customers.clear()
+    Base.metadata.drop_all(bind=engine)
 
 
 def test_hello_returns_hello_world_fj():
@@ -136,6 +159,101 @@ def test_delete_customer_unknown_returns_404():
     """DELETE /api/customers/{id} returns 404 for unknown id."""
     response = client.delete("/api/customers/nonexistent-id")
     assert response.status_code == 404
+
+
+def test_create_customer_missing_name_returns_400():
+    """POST /api/customers with no name returns a controlled 400, not a 500."""
+    response = client.post("/api/customers", json={"email": "x@example.com"})
+    assert response.status_code == 400
+
+
+def test_create_customer_null_email_returns_400():
+    """POST /api/customers with a null email returns a controlled 400."""
+    response = client.post(
+        "/api/customers", json={"name": "Ann", "email": None}
+    )
+    assert response.status_code == 400
+
+
+def test_update_customer_invalid_name_returns_400():
+    """PUT /api/customers/{id} with an empty name returns 400."""
+    created = client.post(
+        "/api/customers", json={"name": "Ivy", "email": "ivy@example.com"}
+    ).json()
+    response = client.put(
+        f"/api/customers/{created['id']}", json={"name": "   "}
+    )
+    assert response.status_code == 400
+
+
+def test_create_customer_invalid_optional_field_returns_400():
+    """POST /api/customers with a non-string optional field returns 400."""
+    response = client.post(
+        "/api/customers",
+        json={"name": "A", "email": "a@example.com", "phone": {"bad": "value"}},
+    )
+    assert response.status_code == 400
+
+
+def test_update_customer_invalid_optional_field_returns_400():
+    """PUT /api/customers/{id} with a non-string optional field returns 400."""
+    created = client.post(
+        "/api/customers", json={"name": "Jo", "email": "jo@example.com"}
+    ).json()
+    response = client.put(
+        f"/api/customers/{created['id']}", json={"company": ["not", "a", "string"]}
+    )
+    assert response.status_code == 400
+
+
+def test_update_customer_preserves_omitted_optional_fields():
+    """PUT without phone/company/address leaves the existing values intact."""
+    created = client.post(
+        "/api/customers",
+        json={
+            "name": "Kim",
+            "email": "kim@example.com",
+            "phone": "555-7777",
+            "company": "Globex",
+            "address": "1 Loop",
+        },
+    ).json()
+    updated = client.put(
+        f"/api/customers/{created['id']}", json={"name": "Kim Updated"}
+    ).json()
+    assert updated["name"] == "Kim Updated"
+    assert updated["phone"] == "555-7777"
+    assert updated["company"] == "Globex"
+    assert updated["address"] == "1 Loop"
+
+
+def test_list_customers_preserves_insertion_order():
+    """GET /api/customers returns customers in the order they were created."""
+    names = ["First", "Second", "Third"]
+    for name in names:
+        client.post(
+            "/api/customers", json={"name": name, "email": f"{name}@example.com"}
+        )
+    listed = [c["name"] for c in client.get("/api/customers").json()]
+    assert listed == names
+
+
+def test_customer_persisted_in_database():
+    """Created customers are written to the database, not just process memory."""
+    created = client.post(
+        "/api/customers", json={"name": "Grace", "email": "grace@example.com"}
+    ).json()
+
+    # Read directly from a fresh DB session to confirm the row was committed,
+    # which is what allows records to survive a backend restart.
+    session = TestingSessionLocal()
+    try:
+        row = session.get(Customer, created["id"])
+        assert row is not None
+        assert row.name == "Grace"
+        assert row.email == "grace@example.com"
+    finally:
+        session.close()
 
 
 def test_cors_allows_post_method():

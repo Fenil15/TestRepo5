@@ -32,3 +32,19 @@ The server listens on `http://localhost:8000`.
 
 CORS is configured to allow the Vite dev server origin
 (`http://localhost:5173`) for `GET` requests.
+
+## Persistence
+
+Customer records are stored in a relational database so they survive backend
+restarts and deployments. The connection target is controlled by the
+`DATABASE_URL` environment variable:
+
+- **Local dev (default):** a SQLite file at `backend/customers.db` is created
+  automatically on startup — no configuration needed.
+- **Production:** set `DATABASE_URL` to a Postgres URL, for example:
+
+  ```sh
+  export DATABASE_URL="postgresql+psycopg://user:password@host:5432/dbname"
+  ```
+
+Tables are created automatically on application startup.
