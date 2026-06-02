@@ -266,15 +266,24 @@ def test_search_sort_and_pagination_combined():
 
 def test_list_handles_non_string_field_values():
     """Non-string stored field values do not crash search/sort (regression)."""
-    # The API accepts raw dicts, so a numeric name can be stored.
+    # The API accepts raw dicts, so numeric/falsy names can be stored.
     client.post("/api/customers", json={"name": 123, "email": "num@example.com"})
+    client.post("/api/customers", json={"name": 0, "email": "zero@example.com"})
     client.post("/api/customers", json={"name": "Alice", "email": "alice@example.com"})
 
-    # Listing with sort + search must not 500 on the non-string value.
-    resp = client.get("/api/customers?sort_by=name&search=alice")
-    assert resp.status_code == 200
-    names = [c["name"] for c in resp.json()["items"]]
-    assert names == ["Alice"]
+    # Sort-only must not 500 on the non-string values.
+    sort_resp = client.get("/api/customers?sort_by=name")
+    assert sort_resp.status_code == 200
+
+    # Search must not 500 and must still match string values.
+    search_resp = client.get("/api/customers?sort_by=name&search=alice")
+    assert search_resp.status_code == 200
+    assert [c["name"] for c in search_resp.json()["items"]] == ["Alice"]
+
+    # Falsy non-None values remain searchable (0 -> "0", not dropped).
+    zero_resp = client.get("/api/customers?search=0")
+    assert zero_resp.status_code == 200
+    assert any(c["email"] == "zero@example.com" for c in zero_resp.json()["items"])
 
 
 def test_cors_allows_post_method():

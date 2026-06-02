@@ -10,6 +10,16 @@ app = FastAPI()
 # Fields the customer list may be sorted by.
 SORTABLE_FIELDS = frozenset({"name", "email", "company"})
 
+
+def _field_text(customer: dict, field: str) -> str:
+    """Return a customer field as lowercase text for search/sort.
+
+    Treats only ``None`` as empty; other non-string values (the API accepts raw
+    dicts) are stringified so they remain searchable and sortable without crashing.
+    """
+    value = customer.get(field)
+    return "" if value is None else str(value).lower()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -57,21 +67,20 @@ def list_customers(
     results = list(customers.values())
 
     # Filter by case-insensitive substring across name, email and company.
-    # str() guards against non-string stored values (the API accepts raw dicts).
     term = search.strip().lower()
     if term:
         results = [
             c
             for c in results
-            if term in str(c.get("name") or "").lower()
-            or term in str(c.get("email") or "").lower()
-            or term in str(c.get("company") or "").lower()
+            if term in _field_text(c, "name")
+            or term in _field_text(c, "email")
+            or term in _field_text(c, "company")
         ]
 
     # Sort by an allowed field; fall back to name for unknown values.
     field = sort_by if sort_by in SORTABLE_FIELDS else "name"
     reverse = sort_dir == "desc"
-    results.sort(key=lambda c: str(c.get(field) or "").lower(), reverse=reverse)
+    results.sort(key=lambda c: _field_text(c, field), reverse=reverse)
 
     total = len(results)
     start = (page - 1) * page_size
