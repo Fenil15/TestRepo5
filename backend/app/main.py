@@ -2,10 +2,13 @@
 
 import uuid
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Fields the customer list may be sorted by.
+SORTABLE_FIELDS = frozenset({"name", "email", "company"})
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,9 +35,48 @@ def hello() -> dict[str, str]:
 
 
 @app.get("/api/customers")
-def list_customers() -> list[dict]:
-    """Return list of all customers."""
-    return list(customers.values())
+def list_customers(
+    search: str = "",
+    sort_by: str = "name",
+    sort_dir: str = "asc",
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+) -> dict:
+    """Return a paginated, optionally filtered and sorted list of customers.
+
+    Query params:
+    - ``search``: case-insensitive substring matched against name, email and company.
+    - ``sort_by``: one of ``name``, ``email`` or ``company`` (defaults to ``name``).
+    - ``sort_dir``: ``asc`` or ``desc`` (defaults to ``asc``).
+    - ``page``: 1-based page number.
+    - ``page_size``: number of records per page (1-100).
+
+    Returns an envelope with ``items`` (the current page), ``total`` (count of all
+    matching records), ``page`` and ``page_size`` so the client can build pagination.
+    """
+    results = list(customers.values())
+
+    # Filter by case-insensitive substring across name, email and company.
+    term = search.strip().lower()
+    if term:
+        results = [
+            c
+            for c in results
+            if term in (c.get("name") or "").lower()
+            or term in (c.get("email") or "").lower()
+            or term in (c.get("company") or "").lower()
+        ]
+
+    # Sort by an allowed field; fall back to name for unknown values.
+    field = sort_by if sort_by in SORTABLE_FIELDS else "name"
+    reverse = sort_dir == "desc"
+    results.sort(key=lambda c: (c.get(field) or "").lower(), reverse=reverse)
+
+    total = len(results)
+    start = (page - 1) * page_size
+    items = results[start : start + page_size]
+
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 @app.post("/api/customers", status_code=201)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import './Customers.css'
 
 type Customer = {
@@ -9,6 +9,18 @@ type Customer = {
   company: string | null
   address: string | null
 }
+
+type CustomerPage = {
+  items: Customer[]
+  total: number
+  page: number
+  page_size: number
+}
+
+type SortField = 'name' | 'email' | 'company'
+type SortDir = 'asc' | 'desc'
+
+const PAGE_SIZE = 10
 
 type FormData = {
   name: string
@@ -25,18 +37,19 @@ type EditState = {
 
 type CustomerListState =
   | { status: 'loading' }
-  | { status: 'ok'; customers: Customer[] }
+  | { status: 'ok'; customers: Customer[]; total: number }
   | { status: 'error' }
 
 type CustomerListAction =
-  | { type: 'loaded'; customers: Customer[] }
+  | { type: 'loaded'; customers: Customer[]; total: number }
   | { type: 'failed' }
 
 function customerListReducer(
   _state: CustomerListState,
   action: CustomerListAction,
 ): CustomerListState {
-  if (action.type === 'loaded') return { status: 'ok', customers: action.customers }
+  if (action.type === 'loaded')
+    return { status: 'ok', customers: action.customers, total: action.total }
   return { status: 'error' }
 }
 
@@ -58,6 +71,34 @@ function customerToFormData(c: Customer): FormData {
   }
 }
 
+type SortableHeaderProps = {
+  label: string
+  field: SortField
+  activeField: SortField
+  dir: SortDir
+  onSort: (field: SortField) => void
+}
+
+function SortableHeader({ label, field, activeField, dir, onSort }: SortableHeaderProps) {
+  const isActive = field === activeField
+  const indicator = isActive ? (dir === 'asc' ? '▲' : '▼') : ''
+  return (
+    <th
+      className={`customers-th-sortable${isActive ? ' customers-th-sortable--active' : ''}`}
+      aria-sort={isActive ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        className="customers-sort-btn"
+        onClick={() => onSort(field)}
+      >
+        {label}
+        <span className="customers-sort-indicator">{indicator}</span>
+      </button>
+    </th>
+  )
+}
+
 function Customers() {
   const [listState, dispatch] = useReducer(customerListReducer, { status: 'loading' })
   const [refreshToken, setRefreshToken] = useState<number>(0)
@@ -66,19 +107,52 @@ function Customers() {
   const [editState, setEditState] = useState<EditState | null>(null)
   const [editError, setEditError] = useState<string>('')
 
+  // Search / sort / pagination state.
+  const [searchInput, setSearchInput] = useState<string>('')
+  const [search, setSearch] = useState<string>('')
+  const [sortField, setSortField] = useState<SortField>('name')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [page, setPage] = useState<number>(1)
+
   const triggerRefresh = useCallback(() => {
     setRefreshToken((t) => t + 1)
   }, [])
 
+  // Debounce the search box so we don't fetch on every keystroke. Reset to page 1
+  // whenever the active search term changes.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearch(searchInput)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [searchInput])
+
   useEffect(() => {
     let cancelled = false
-    fetch('/api/customers')
+    const params = new URLSearchParams({
+      sort_by: sortField,
+      sort_dir: sortDir,
+      page: String(page),
+      page_size: String(PAGE_SIZE),
+    })
+    if (search) params.set('search', search)
+
+    fetch(`/api/customers?${params.toString()}`)
       .then((r) => {
         if (!r.ok) throw new Error('Failed to fetch customers')
-        return r.json() as Promise<Customer[]>
+        return r.json() as Promise<CustomerPage>
       })
       .then((data) => {
-        if (!cancelled) dispatch({ type: 'loaded', customers: data })
+        if (cancelled) return
+        // If this page is now beyond the available results (e.g. after a
+        // deletion emptied it), step back to the last valid page.
+        const lastPage = Math.max(1, Math.ceil(data.total / PAGE_SIZE))
+        if (data.items.length === 0 && page > lastPage) {
+          setPage(lastPage)
+          return
+        }
+        dispatch({ type: 'loaded', customers: data.items, total: data.total })
       })
       .catch(() => {
         if (!cancelled) dispatch({ type: 'failed' })
@@ -86,7 +160,30 @@ function Customers() {
     return () => {
       cancelled = true
     }
-  }, [refreshToken])
+  }, [refreshToken, search, sortField, sortDir, page])
+
+  const total = listState.status === 'ok' ? listState.total : 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const handleSort = useCallback(
+    (field: SortField) => {
+      if (field === sortField) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+      } else {
+        setSortField(field)
+        setSortDir('asc')
+      }
+      setPage(1)
+    },
+    [sortField],
+  )
+
+  const rangeLabel = useMemo(() => {
+    if (total === 0) return '0 customers'
+    const start = (page - 1) * PAGE_SIZE + 1
+    const end = Math.min(page * PAGE_SIZE, total)
+    return `${start}–${end} of ${total}`
+  }, [page, total])
 
   function handleAddChange(field: keyof FormData, value: string) {
     setAddForm((prev) => ({ ...prev, [field]: value }))
@@ -188,14 +285,47 @@ function Customers() {
       {listState.status === 'ok' && (
         <>
           {editError && <p className="customers-form-error">{editError}</p>}
+
+          <div className="customers-toolbar">
+            <div className="customers-search">
+              <input
+                type="search"
+                className="customers-search-input"
+                placeholder="Search name, email, or company…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                aria-label="Search customers"
+              />
+            </div>
+            <span className="customers-range">{rangeLabel}</span>
+          </div>
+
           <div className="customers-table-wrapper">
             <table className="customers-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
+                  <SortableHeader
+                    label="Name"
+                    field="name"
+                    activeField={sortField}
+                    dir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    label="Email"
+                    field="email"
+                    activeField={sortField}
+                    dir={sortDir}
+                    onSort={handleSort}
+                  />
                   <th>Phone</th>
-                  <th>Company</th>
+                  <SortableHeader
+                    label="Company"
+                    field="company"
+                    activeField={sortField}
+                    dir={sortDir}
+                    onSort={handleSort}
+                  />
                   <th>Address</th>
                   <th>Actions</th>
                 </tr>
@@ -204,7 +334,9 @@ function Customers() {
                 {listState.customers.length === 0 && (
                   <tr>
                     <td colSpan={6} className="customers-empty">
-                      No customers yet. Add one below.
+                      {search
+                        ? 'No customers match your search.'
+                        : 'No customers yet. Add one below.'}
                     </td>
                   </tr>
                 )}
@@ -290,6 +422,26 @@ function Customers() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="customers-pagination">
+            <button
+              className="customers-btn customers-btn--page"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Previous
+            </button>
+            <span className="customers-page-info">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              className="customers-btn customers-btn--page"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              Next
+            </button>
           </div>
         </>
       )}

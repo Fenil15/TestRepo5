@@ -23,10 +23,81 @@
   font-size: 0.9rem;
 }
 
+/* Toolbar: search + result count */
+.customers-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.customers-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.customers-search-input {
+  width: 100%;
+  max-width: 360px;
+  padding: 0.5rem 0.75rem;
+  background-color: #2a2a3e;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.customers-search-input:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+.customers-range {
+  font-size: 0.85rem;
+  color: #aaa;
+  white-space: nowrap;
+}
+
 /* Table */
 .customers-table-wrapper {
   overflow-x: auto;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Sortable column headers */
+.customers-th-sortable {
+  padding: 0;
+}
+
+.customers-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.customers-sort-btn:hover {
+  color: #fff;
+}
+
+.customers-th-sortable--active .customers-sort-btn {
+  color: #aab0ff;
+}
+
+.customers-sort-indicator {
+  font-size: 0.7rem;
+  line-height: 1;
 }
 
 .customers-table {
@@ -128,6 +199,30 @@
   padding: 0.5rem 1.5rem;
   font-size: 1rem;
   margin-top: 0.5rem;
+}
+
+.customers-btn--page {
+  background-color: #444;
+  color: #e0e0e0;
+}
+
+.customers-btn--page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Pagination controls */
+.customers-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.customers-page-info {
+  font-size: 0.9rem;
+  color: #ccc;
 }
 
 /* Add Customer form */
