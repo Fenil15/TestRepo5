@@ -8,8 +8,12 @@
 }
 
 .nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #e0e0e0;
   text-decoration: none;
+  text-align: center;
   font-weight: 500;
   font-size: 1rem;
   transition: color 0.2s;
