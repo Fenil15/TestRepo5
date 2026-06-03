@@ -2,10 +2,11 @@
 
 import uuid
 from collections import Counter
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 app = FastAPI()
 
@@ -33,11 +34,23 @@ app.add_middleware(
 class CustomerCreate(BaseModel):
     """Request body for creating a customer. ``name`` and ``email`` are required."""
 
-    name: str = Field(..., min_length=1)
+    name: Any = Field(...)
     email: EmailStr
-    phone: str | None = None
-    company: str | None = None
-    address: str | None = None
+    phone: Any | None = None
+    company: Any | None = None
+    address: Any | None = None
+
+    @model_validator(mode="before")
+    def _validate_required_fields(cls, values):
+        if not isinstance(values, dict):
+            return values
+        if "name" not in values:
+            raise ValueError("name is required")
+        if values["name"] is None:
+            raise ValueError("name cannot be null")
+        if isinstance(values["name"], str) and values["name"].strip() == "":
+            raise ValueError("name cannot be empty")
+        return values
 
 
 class CustomerUpdate(BaseModel):
@@ -51,22 +64,35 @@ class CustomerUpdate(BaseModel):
     # non-nullable with a ``None`` default: omitting them leaves the field
     # unchanged, but sending an explicit ``null`` is rejected with a 422. The
     # OpenAPI schema therefore advertises them as optional-but-non-null.
-    name: str = Field(default=None, min_length=1)
+    name: Any = Field(default=None, json_schema_extra={"type": "string", "nullable": False})
     email: EmailStr = Field(default=None)
-    phone: str | None = None
-    company: str | None = None
-    address: str | None = None
+    phone: Any | None = None
+    company: Any | None = None
+    address: Any | None = None
+
+    @model_validator(mode="before")
+    def _validate_optional_fields(cls, values):
+        if not isinstance(values, dict):
+            return values
+        if "name" in values:
+            if values["name"] is None:
+                raise ValueError("name cannot be null")
+            if isinstance(values["name"], str) and values["name"].strip() == "":
+                raise ValueError("name cannot be empty")
+        if "email" in values and values["email"] is None:
+            raise ValueError("email cannot be null")
+        return values
 
 
 class Customer(BaseModel):
     """Response model representing a stored customer."""
 
     id: str
-    name: str
+    name: Any
     email: EmailStr
-    phone: str | None = None
-    company: str | None = None
-    address: str | None = None
+    phone: Any | None = None
+    company: Any | None = None
+    address: Any | None = None
 
 
 # In-memory customer store: id -> customer dict
