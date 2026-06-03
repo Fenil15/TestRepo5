@@ -33,6 +33,11 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
   } as unknown as Response
 }
 
+/** Wrap a Customer array in the paginated envelope the component expects. */
+function pageResponse(items: Customer[]): Response {
+  return jsonResponse({ items, total: items.length, page: 1, page_size: 10 })
+}
+
 const fetchMock = vi.fn()
 
 beforeEach(() => {
@@ -69,7 +74,7 @@ describe('Customers page', () => {
   })
 
   it('renders an empty-state row when there are no customers', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse([]))
+    fetchMock.mockResolvedValueOnce(pageResponse([]))
     render(<Customers />)
     expect(
       await screen.findByText('No customers yet. Add one below.'),
@@ -78,7 +83,7 @@ describe('Customers page', () => {
 
   it('renders customer rows once loaded', async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse([makeCustomer(), makeCustomer({ id: 'c2', name: 'Bob', email: 'bob@example.com' })]),
+      pageResponse([makeCustomer(), makeCustomer({ id: 'c2', name: 'Bob', email: 'bob@example.com' })]),
     )
     render(<Customers />)
 
@@ -90,7 +95,7 @@ describe('Customers page', () => {
 
   it('renders blank cells for null optional fields', async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse([makeCustomer({ phone: null, company: null, address: null })]),
+      pageResponse([makeCustomer({ phone: null, company: null, address: null })]),
     )
     render(<Customers />)
 
@@ -108,11 +113,11 @@ describe('Customers page', () => {
     const carol = makeCustomer({ id: 'new', name: 'Carol', email: 'carol@example.com' })
     fetchMock
       // initial load
-      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(pageResponse([]))
       // POST create
       .mockResolvedValueOnce(jsonResponse(carol, true, 201))
       // refresh load
-      .mockResolvedValueOnce(jsonResponse([carol]))
+      .mockResolvedValueOnce(pageResponse([carol]))
 
     render(<Customers />)
     await screen.findByText('No customers yet. Add one below.')
@@ -138,7 +143,7 @@ describe('Customers page', () => {
   it('shows an error when adding a customer fails', async () => {
     const user = userEvent.setup()
     fetchMock
-      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(pageResponse([]))
       .mockResolvedValueOnce(jsonResponse(null, false, 500))
 
     render(<Customers />)
@@ -156,11 +161,11 @@ describe('Customers page', () => {
   it('edits a customer and saves the changes', async () => {
     const user = userEvent.setup()
     fetchMock
-      .mockResolvedValueOnce(jsonResponse([makeCustomer()]))
+      .mockResolvedValueOnce(pageResponse([makeCustomer()]))
       // PUT update
       .mockResolvedValueOnce(jsonResponse(makeCustomer({ name: 'Alice Updated' })))
       // refresh load
-      .mockResolvedValueOnce(jsonResponse([makeCustomer({ name: 'Alice Updated' })]))
+      .mockResolvedValueOnce(pageResponse([makeCustomer({ name: 'Alice Updated' })]))
 
     render(<Customers />)
     await screen.findByText('Alice')
@@ -182,7 +187,7 @@ describe('Customers page', () => {
 
   it('cancels an edit without calling the API', async () => {
     const user = userEvent.setup()
-    fetchMock.mockResolvedValueOnce(jsonResponse([makeCustomer()]))
+    fetchMock.mockResolvedValueOnce(pageResponse([makeCustomer()]))
 
     render(<Customers />)
     await screen.findByText('Alice')
@@ -201,7 +206,7 @@ describe('Customers page', () => {
   it('shows an error when saving an edit fails', async () => {
     const user = userEvent.setup()
     fetchMock
-      .mockResolvedValueOnce(jsonResponse([makeCustomer()]))
+      .mockResolvedValueOnce(pageResponse([makeCustomer()]))
       .mockResolvedValueOnce(jsonResponse(null, false, 500))
 
     render(<Customers />)
@@ -218,11 +223,11 @@ describe('Customers page', () => {
   it('deletes a customer and refreshes the list', async () => {
     const user = userEvent.setup()
     fetchMock
-      .mockResolvedValueOnce(jsonResponse([makeCustomer()]))
+      .mockResolvedValueOnce(pageResponse([makeCustomer()]))
       // DELETE
       .mockResolvedValueOnce(jsonResponse(null, true, 204))
       // refresh load -> now empty
-      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(pageResponse([]))
 
     render(<Customers />)
     await screen.findByText('Alice')
@@ -240,11 +245,11 @@ describe('Customers page', () => {
   it('still refreshes the list when a delete request fails', async () => {
     const user = userEvent.setup()
     fetchMock
-      .mockResolvedValueOnce(jsonResponse([makeCustomer()]))
+      .mockResolvedValueOnce(pageResponse([makeCustomer()]))
       // DELETE fails
       .mockRejectedValueOnce(new Error('boom'))
       // refresh load still happens
-      .mockResolvedValueOnce(jsonResponse([makeCustomer()]))
+      .mockResolvedValueOnce(pageResponse([makeCustomer()]))
 
     render(<Customers />)
     await screen.findByText('Alice')
@@ -253,7 +258,7 @@ describe('Customers page', () => {
 
     await waitFor(() => {
       const refreshCalls = fetchMock.mock.calls.filter(
-        ([url, opts]) => url === '/api/customers' && (opts === undefined || opts.method === undefined),
+        ([url, opts]) => (url as string).startsWith('/api/customers') && (opts === undefined || opts.method === undefined),
       )
       expect(refreshCalls.length).toBe(2)
     })
