@@ -285,6 +285,118 @@ def test_list_handles_non_string_field_values():
     assert zero_resp.status_code == 200
     assert any(c["email"] == "zero@example.com" for c in zero_resp.json()["items"])
 
+def test_create_customer_missing_name_returns_422():
+    """POST /api/customers without name returns 422, not a 500."""
+    response = client.post("/api/customers", json={"email": "noname@example.com"})
+    assert response.status_code == 422
+
+
+def test_create_customer_missing_email_returns_422():
+    """POST /api/customers without email returns 422, not a 500."""
+    response = client.post("/api/customers", json={"name": "No Email"})
+    assert response.status_code == 422
+
+
+def test_create_customer_malformed_email_returns_422():
+    """POST /api/customers with an invalid email returns 422."""
+    response = client.post(
+        "/api/customers", json={"name": "Bad Email", "email": "not-an-email"}
+    )
+    assert response.status_code == 422
+
+
+def test_create_customer_empty_name_returns_422():
+    """POST /api/customers with an empty name returns 422."""
+    response = client.post(
+        "/api/customers", json={"name": "", "email": "empty@example.com"}
+    )
+    assert response.status_code == 422
+
+
+def test_create_customer_empty_body_returns_422():
+    """POST /api/customers with no body returns 422 instead of crashing."""
+    response = client.post("/api/customers", json={})
+    assert response.status_code == 422
+
+
+def test_update_customer_partial_keeps_existing_fields():
+    """PUT with a subset of fields updates only those and keeps the rest."""
+    created = client.post(
+        "/api/customers",
+        json={"name": "Grace", "email": "grace@example.com", "phone": "111-2222"},
+    ).json()
+    customer_id = created["id"]
+
+    response = client.put(
+        f"/api/customers/{customer_id}", json={"name": "Grace Updated"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Grace Updated"
+    assert data["email"] == "grace@example.com"
+    assert data["phone"] == "111-2222"
+
+
+def test_update_customer_malformed_email_returns_422():
+    """PUT /api/customers/{id} with an invalid email returns 422."""
+    created = client.post(
+        "/api/customers", json={"name": "Heidi", "email": "heidi@example.com"}
+    ).json()
+    customer_id = created["id"]
+
+    response = client.put(
+        f"/api/customers/{customer_id}", json={"email": "not-an-email"}
+    )
+    assert response.status_code == 422
+
+
+def test_update_customer_null_name_returns_422_and_preserves_customer():
+    """PUT with explicit null name returns 422 and leaves the stored customer intact."""
+    created = client.post(
+        "/api/customers", json={"name": "Ivan", "email": "ivan@example.com"}
+    ).json()
+    customer_id = created["id"]
+
+    response = client.put(f"/api/customers/{customer_id}", json={"name": None})
+    assert response.status_code == 422
+
+    # The existing customer must remain valid and unchanged.
+    after = client.get(f"/api/customers/{customer_id}")
+    assert after.status_code == 200
+    assert after.json() == created
+
+
+def test_update_customer_null_email_returns_422_and_preserves_customer():
+    """PUT with explicit null email returns 422 and leaves the stored customer intact."""
+    created = client.post(
+        "/api/customers", json={"name": "Judy", "email": "judy@example.com"}
+    ).json()
+    customer_id = created["id"]
+
+    response = client.put(f"/api/customers/{customer_id}", json={"email": None})
+    assert response.status_code == 422
+
+    after = client.get(f"/api/customers/{customer_id}")
+    assert after.status_code == 200
+    assert after.json() == created
+
+
+def test_openapi_documents_customer_schema():
+    """The OpenAPI schema exposes the typed Customer/CustomerCreate models."""
+    schema = client.get("/openapi.json").json()
+    components = schema.get("components", {}).get("schemas", {})
+    assert "CustomerCreate" in components
+    assert "Customer" in components
+    assert "CustomerUpdate" in components
+
+    # name/email are required-on-resource: the schema must NOT advertise them as
+    # nullable, since sending an explicit null is rejected with a 422.
+    update_props = components["CustomerUpdate"]["properties"]
+    assert update_props["name"]["type"] == "string"
+    assert "anyOf" not in update_props["name"]
+    assert update_props["email"]["type"] == "string"
+    assert "anyOf" not in update_props["email"]
+
 
 def test_cors_allows_post_method():
     """CORS preflight for POST /api/customers is allowed from localhost:5173."""
