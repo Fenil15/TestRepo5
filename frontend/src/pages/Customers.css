@@ -1,5 +1,6 @@
 .customers-page {
   max-width: 1100px;
+  margin: 0 auto;
 }
 
 .customers-page h1 {
@@ -119,8 +120,29 @@
   font-weight: 600;
 }
 
+/* Column sizing */
+.customers-table th:nth-child(2),
+.customers-table td:nth-child(2) {
+  min-width: 220px;
+}
+
+.customers-table th:nth-child(5),
+.customers-table td:nth-child(5) {
+  min-width: 260px;
+}
+
+/* Allow long addresses to wrap */
+.customers-table td:nth-child(5) {
+  word-break: break-word;
+}
+
 .customers-table tbody tr:hover {
   background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Zebra striping for readability */
+.customers-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 .customers-row--editing td {
@@ -211,6 +233,13 @@
   cursor: not-allowed;
 }
 
+/* Enhanced focus styles for accessibility */
+.customers-btn:focus-visible,
+.customers-sort-btn:focus-visible {
+  outline: 2px solid #646cff;
+  outline-offset: 2px;
+}
+
 /* Pagination controls */
 .customers-pagination {
   display: flex;
@@ -227,7 +256,7 @@
 
 /* Add Customer form */
 .customers-add {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -243,6 +272,11 @@
   flex-direction: column;
   gap: 0.75rem;
   max-width: 480px;
+  width: 100%;
+  background-color: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1rem;
 }
 
 .customers-form-row {
@@ -262,3 +296,15 @@
 .customers-form-row .customers-input {
   flex: 1;
 }
+
+/* Mobile-friendly stacking for narrow screens */
+@media (max-width: 640px) {
+  .customers-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .customers-form-row label {
+    width: auto;
+  }
+}
+
