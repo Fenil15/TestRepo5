@@ -128,6 +128,12 @@
   font-weight: 500;
 }
 
+.settings-error {
+  color: #e05c5c;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+}
+
 @media (max-width: 640px) {
   .settings-field {
     flex-direction: column;

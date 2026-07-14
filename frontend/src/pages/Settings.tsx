@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import './Settings.css'
 
 type Theme = 'system' | 'light' | 'dark'
 type Density = 'comfortable' | 'compact'
 
-type Settings = {
+type AppSettings = {
   displayName: string
   theme: Theme
   density: Density
@@ -16,7 +16,7 @@ const STORAGE_KEY = 'app-settings'
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const
 
-const defaultSettings: Settings = {
+const defaultSettings: AppSettings = {
   displayName: '',
   theme: 'system',
   density: 'comfortable',
@@ -32,15 +32,21 @@ function isDensity(value: unknown): value is Density {
   return value === 'comfortable' || value === 'compact'
 }
 
+function isItemsPerPage(value: unknown): value is AppSettings['itemsPerPage'] {
+  return ITEMS_PER_PAGE_OPTIONS.includes(
+    value as (typeof ITEMS_PER_PAGE_OPTIONS)[number],
+  )
+}
+
 /**
  * Read persisted settings from localStorage, tolerating missing/corrupt data
  * and unknown fields by falling back to defaults on a per-field basis.
  */
-function loadSettings(): Settings {
+function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultSettings
-    const parsed = JSON.parse(raw) as Partial<Record<keyof Settings, unknown>>
+    const parsed = JSON.parse(raw) as Partial<Record<keyof AppSettings, unknown>>
     return {
       displayName:
         typeof parsed.displayName === 'string'
@@ -50,10 +56,8 @@ function loadSettings(): Settings {
       density: isDensity(parsed.density)
         ? parsed.density
         : defaultSettings.density,
-      itemsPerPage: ITEMS_PER_PAGE_OPTIONS.includes(
-        parsed.itemsPerPage as (typeof ITEMS_PER_PAGE_OPTIONS)[number],
-      )
-        ? (parsed.itemsPerPage as number)
+      itemsPerPage: isItemsPerPage(parsed.itemsPerPage)
+        ? parsed.itemsPerPage
         : defaultSettings.itemsPerPage,
       emailNotifications:
         typeof parsed.emailNotifications === 'boolean'
@@ -66,9 +70,10 @@ function loadSettings(): Settings {
 }
 
 function Settings() {
-  const [saved, setSaved] = useState<Settings>(() => loadSettings())
-  const [form, setForm] = useState<Settings>(saved)
+  const [saved, setSaved] = useState<AppSettings>(() => loadSettings())
+  const [form, setForm] = useState<AppSettings>(saved)
   const [justSaved, setJustSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   // Clear the "Saved" confirmation shortly after it appears.
   useEffect(() => {
@@ -77,19 +82,23 @@ function Settings() {
     return () => clearTimeout(handle)
   }, [justSaved])
 
-  const isDirty = useMemo(
-    () => JSON.stringify(form) !== JSON.stringify(saved),
-    [form, saved],
-  )
+  const isDirty = JSON.stringify(form) !== JSON.stringify(saved)
 
-  function update<K extends keyof Settings>(key: K, value: Settings[K]) {
+  function update<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
     setJustSaved(false)
+    setSaveError('')
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+    } catch {
+      setSaveError('Could not save settings. Your browser storage may be full or disabled.')
+      return
+    }
+    setSaveError('')
     setSaved(form)
     setJustSaved(true)
   }
@@ -97,6 +106,7 @@ function Settings() {
   function handleReset() {
     setForm(defaultSettings)
     setJustSaved(false)
+    setSaveError('')
   }
 
   return (
@@ -206,6 +216,11 @@ function Settings() {
             </span>
           )}
         </div>
+        {saveError && (
+          <p className="settings-error" role="alert">
+            {saveError}
+          </p>
+        )}
       </form>
     </main>
   )
