@@ -4,6 +4,7 @@ import Customers from './pages/Customers'
 import Dashboard from './pages/Dashboard'
 import FraudDetection from './pages/FraudDetection'
 import RecentOrders from './pages/RecentOrders'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="fraud-detection" element={<FraudDetection />} />
         <Route path="recent-orders" element={<RecentOrders />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )
