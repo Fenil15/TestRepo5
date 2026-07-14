@@ -9,6 +9,7 @@ function Layout() {
         <NavLink to="/recent-orders">Recent Orders</NavLink>
         <NavLink to="/fraud-detection">Fraud Detection</NavLink>
         <NavLink to="/customers">Manage Customers</NavLink>
+        <NavLink to="/settings">Settings</NavLink>
       </nav>
       <div className="layout-content">
         <Outlet />
